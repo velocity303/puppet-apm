@@ -49,7 +49,6 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
     nil
   end
 
-
   def apm_command(command_str)
     self.class.apm_command(command_str)
   end
@@ -59,7 +58,7 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
   end
 
   def latest
-    json = JSON.parse(apm_command " outdated --json")#, :custom_environment => CUSTOM_ENVIRONMENT)
+    json = JSON.parse(apm_command " outdated --json")
     item = json.select{|item| item["name"] == resource[:name]}.first
 
     if !item.nil?
@@ -69,7 +68,6 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
     end
   end
 
-
   def install
     case @resource[:ensure]
       when String
@@ -78,7 +76,6 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
         apm_command "install #{@resource[:name]}"
     end
   end
-
 
   def update
     install
