@@ -1,14 +1,13 @@
 {
-  "name": "cyberious-atom",
+  "name": "cyberious-apm",
   "version": "0.1.0",
   "author": "cyberious",
   "summary": "Install and manage atom packages",
   "license": "Apache-2.0",
-  "source": "",
-  "project_page": null,
-  "issues_url": null,
+  "source": "https://github.com/cyberious/puppet-apm",
+  "project_page": "https://github.com/cyberious/puppet-apm",
+  "issues_url": "https://github.com/cyberious/puppet-apm/issues",
   "dependencies": [
-    {"name":"puppetlabs-stdlib","version_requirement":">= 1.0.0"}
+    
   ]
 }
-
