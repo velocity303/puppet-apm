@@ -1,83 +1,90 @@
 require 'puppet/provider/package'
+require 'json'
 
 Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package do
   desc "apm is the package manager for Atom IDE."
   CUSTOM_ENVIRONMENT = {"HOME" => ENV["HOME"], "USER" => ENV["USER"]}
 
-  has_feature :versionable
+  has_feature :installable, :uninstallable,
+              :upgradeable, :versionable
 
   if respond_to? :has_command
-    has_command :apm, "apm"
+    has_command :apm, "apm" do
+
+    end
   else
     commands :apm => "apm"
   end
 
-  def self.package_list(options={})
-    apm_list_cmd = [command(:apm), "list", "--installed", "--bare"]
-    begin
-      apm_list = execute(apm_list_cmd, :custom_environment => CUSTOM_ENVIRONMENT).lines.
-          map { |line| name_version_split(line) }
-    rescue Puppet::ExecutionFailure => detail
-      raise Puppet::Error, "Could not list packages: #{detail}"
-    end
-    apm_list.pop until apm_list.last
-    Puppet.debug("Returning list of items for #{apm_list}")
-
-    apm_list
-  end
-
-  def self.name_version_split(line)
-    if line =~ (/^(\S+)@(.+)/)
-      name = $1
-      version = $2
-      {
-          :name => name,
-          :ensure => version,
-          :provider => :apm
-      }
+  def self.parse(line)
+    if line.chomp =~ /^(\S+)@(.+)/
+      {:ensure => $2, :name => $1, :provider => name}
     else
       nil
     end
   end
 
   def self.instances
-    package_list.collect { |hash| new(hash) }
+    packages = []
+    execpipe "#{command :apm} list --installed --bare",
+             :custom_environment => CUSTOM_ENVIRONMENT do |process|
+               process.collect do |line|
+                 next unless options = parse(line)
+                 packages << new(options)
+               end
+             end
+
+    packages
   end
 
   def query
-    self.class.instances.each do |package|
-      return package.properties if @resource[:name].downcase == package.name.downcase
-    end
+    execute "#{command :apm} list --installed --bare",
+            :custom_environment => CUSTOM_ENVIRONMENT do |process|
+              process.each do |line|
+                options = self.class.parse(line)
+                return options if options[:name] == @resource[:name]
+              end
+            end
+
+    nil
+  end
+
+
+  def apm_command(command_str)
+    self.class.apm_command(command_str)
+  end
+
+  def self.apm_command(command_str)
+    execute "#{command :apm} #{command_str}", :custom_environment => CUSTOM_ENVIRONMENT
   end
 
   def latest
-    if /#{resource[:name]}.*-> ([\d\.]+)/ =~ apm('outdated', resource[:name])
-      @latest = $1
+    json = JSON.parse(apm_command " outdated --json")#, :custom_environment => CUSTOM_ENVIRONMENT)
+    item = json.select{|item| item["name"] == resource[:name]}.first
+
+    if !item.nil?
+      item["latestVersion"]
     else
       @property_hash[:ensure] unless @property_hash[:ensure].is_a? Symbol
     end
   end
 
-  def update
-    resource[:ensure] = @latest
-    self.install
-  end
 
   def install
-    if resource[:ensure].is_a? Symbol
-      package = resource[:name]
-    else
-      package = "#{resource[:name]}@#{resource[:ensure]}"
+    case @resource[:ensure]
+      when String
+       apm_command "install #{@resource[:name]}@#{@resource[:ensure]}"
+      else
+        apm_command "install #{@resource[:name]}"
     end
+  end
 
-    if resource[:source]
-      apm('install', resource[:source])
-    else
-      apm('install', package)
-    end
+
+  def update
+    install
   end
 
   def uninstall
-    apm('uninstall', resource[:name])
+    apm_command "uninstall #{@resource[:name]}"
   end
 end
