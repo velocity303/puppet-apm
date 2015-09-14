@@ -3,13 +3,18 @@ require 'json'
 
 Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package do
   desc "apm is the package manager for Atom IDE."
-  CUSTOM_ENVIRONMENT = {"HOME" => ENV["HOME"], "USER" => ENV["USER"]}
 
-  has_feature :installable, :uninstallable,
-              :upgradeable, :versionable
+  has_feature :installable
+  has_feature :uninstallable
+  has_feature :install_options
+  has_feature :uninstall_options
+  has_feature :versionable
+
+  CUSTOM_ENVIRONMENT = {"HOME" => ENV["HOME"], "USER" => ENV["USER"]}
 
   if respond_to? :has_command
     has_command :apm, "apm" do
+      is_optional
 
     end
   else
@@ -59,7 +64,7 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
 
   def latest
     json = JSON.parse(apm_command " outdated --json")
-    item = json.select{|item| item["name"] == resource[:name]}.first
+    item = json.select { |item| item["name"] == resource[:name] }.first
 
     if !item.nil?
       item["latestVersion"]
@@ -71,7 +76,7 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
   def install
     case @resource[:ensure]
       when String
-       apm_command "install #{@resource[:name]}@#{@resource[:ensure]}"
+        apm_command "install #{@resource[:name]}@#{@resource[:ensure]}"
       else
         apm_command "install #{@resource[:name]}"
     end
