@@ -31,13 +31,12 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
 
   def self.instances
     packages = []
-    execpipe "#{command :apm} list --installed --bare",
-             :custom_environment => CUSTOM_ENVIRONMENT do |process|
-               process.collect do |line|
-                 next unless options = parse(line)
-                 packages << new(options)
-               end
-             end
+    process = execute "#{command :apm} list --installed --bare",
+                      :custom_environment => CUSTOM_ENVIRONMENT
+    process.each_line do |line|
+      next unless options = parse(line)
+      packages << new(options)
+    end
 
     packages
   end
