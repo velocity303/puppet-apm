@@ -10,7 +10,7 @@ Puppet::Type.type(:package).provide :apm, :parent => Puppet::Provider::Package d
   has_feature :uninstall_options
   has_feature :versionable
 
-  CUSTOM_ENVIRONMENT = {"HOME" => ENV["HOME"], "USER" => ENV["USER"]}
+  CUSTOM_ENVIRONMENT = {"HOME" => '/home/james', "USER" => 'james'}
 
   if respond_to? :has_command
     has_command :apm, "apm" do
